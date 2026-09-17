@@ -8,190 +8,369 @@ SERP Hawk CRM V2 is a comprehensive customer relationship management system desi
 
 ### Key Features
 
-- **Role-Based Access**: Admin, Employee, Intern, Client roles with appropriate permissions
-- **AI Email Agent**: Automated company research and personalized email generation
-- **Real-Time Messaging**: WebSocket-based chat system
-- **Service Management**: Catalog, quotes, invoicing, and billing
-- **SEO Tools**: Keyword rankings, competitor analysis, SEO audits
-- **Document Management**: File uploads, OCR for business cards
-- **Reporting**: PDF exports, monitoring dashboards
+* **Role-Based Access**: Admin, Employee, Intern, Client roles with appropriate permissions
+* **AI Email Agent**: Automated company research and personalized email generation
+* **Real-Time Messaging**: WebSocket-based chat system
+* **Service Management**: Catalog, quotes, invoicing, and billing
+* **SEO Tools**: Keyword rankings, competitor analysis, SEO audits
+* **Document Management**: File uploads, OCR for business cards
+* **Reporting**: PDF exports, monitoring dashboards
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, Framer Motion
-- **Backend**: FastAPI (Python 3.13), SQLModel ORM, Uvicorn with WebSocket
-- **Database**: PostgreSQL (Neon Serverless)
-- **AI**: OpenAI GPT-4o-mini, Google Gemini (OCR)
-- **Integrations**: Outlook SMTP/IMAP, Webhooks, ReportLab PDFs
+* **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, Framer Motion
+* **Backend**: FastAPI, Python, SQLModel ORM, Uvicorn with WebSocket
+* **Database**: PostgreSQL
+* **AI**: OpenAI GPT-4o-mini, Google Gemini (OCR)
+* **Integrations**: Outlook SMTP/IMAP, Webhooks, ReportLab PDFs
 
-## Deployment Guide
+## AWS Deployment
 
-### Prerequisites
+The application is deployed on an AWS EC2 Ubuntu server.
 
-- Node.js 18+
-- Python 3.13+
-- PostgreSQL database (Neon recommended)
-- GitHub account
-- OpenAI API key
-- Google Gemini API key (for OCR)
+### AWS Services
 
-### Backend Deployment
+* **Amazon EC2** – Hosts the Next.js frontend, FastAPI backend, and PostgreSQL database.
+* **Nginx** – Reverse proxy that routes web and API traffic.
+* **PM2** – Process manager for the Next.js frontend and FastAPI backend.
+* **PostgreSQL** – Stores application and CRM data.
+* **Ubuntu** – Operating system running on the EC2 instance.
 
-#### Option 1: Railway (Recommended)
+### Production URLs
 
-1. Create a Railway account at [railway.app](https://railway.app)
-2. Connect your GitHub repository
-3. Add environment variables:
-   - `DATABASE_URL`: Your PostgreSQL connection string
-   - `OPENAI_API_KEY`: Your OpenAI API key
-   - `GEMINI_API_KEY`: Your Google Gemini API key
-   - `SECRET_KEY`: A random secret key for JWT
-   - `SMTP_SERVER`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`: Email settings
-4. Railway will automatically detect the `railway.json` and deploy
+* **Application**: http://13.51.165.2
+* **API Documentation**: http://13.51.165.2/api/docs
 
-#### Option 2: Heroku
+### Production Architecture
 
-1. Create a Heroku account
-2. Install Heroku CLI
-3. Create a new app: `heroku create your-app-name`
-4. Add PostgreSQL addon: `heroku addons:create heroku-postgresql:hobby-dev`
-5. Set environment variables: `heroku config:set KEY=VALUE`
-6. Deploy: `git push heroku main`
+```text
+                         Internet
+                            |
+                            v
+                     AWS EC2 Instance
+                            |
+                         Nginx :80
+                            |
+                +-----------+-----------+
+                |                       |
+                v                       v
+         Next.js :3000            FastAPI :8000
+                |                       |
+                |                       v
+                |                  PostgreSQL
+                |
+                v
+            CRM Web UI
+```
 
-#### Option 3: Manual Server
+The FastAPI service is bound to `127.0.0.1:8000` and is accessed through Nginx. PostgreSQL is also kept on the server and is not exposed publicly.
 
-1. Set up a server with Python 3.13+
-2. Install dependencies: `pip install -r requirements.txt`
-3. Set environment variables
-4. Run with: `uvicorn main:app --host 0.0.0.0 --port 8000`
+### Request Routing
 
-### Frontend Deployment
+* `/` → Next.js frontend
+* `/api/*` → FastAPI backend
+* `/api/docs` → FastAPI Swagger documentation
 
-#### Option 1: Vercel (Recommended for Next.js)
+### Deployment Process
 
-1. Create a Vercel account at [vercel.com](https://vercel.com)
-2. Connect your GitHub repository
-3. Set the root directory to `frontend`
-4. Add environment variables:
-   - `wat `: Your backend API URL
-5. Deploy automatically
+1. Launch an Ubuntu EC2 instance on AWS.
+2. Configure the EC2 security group for HTTP and secure SSH access.
+3. Clone the GitHub repository.
+4. Create the Python virtual environment.
+5. Install backend dependencies.
+6. Configure PostgreSQL and initialise the database.
+7. Configure application environment variables.
+8. Install frontend dependencies.
+9. Create the Next.js production build.
+10. Configure Nginx as a reverse proxy.
+11. Run the application services using PM2.
+12. Configure PM2 to start services automatically after an EC2 reboot.
+13. Verify the frontend, authentication, API and database connectivity.
 
-#### Option 2: Netlify
+## Deployment Configuration
 
-1. Create a Netlify account
-2. Connect GitHub repo
-3. Set build command: `npm run build`
-4. Set publish directory: `frontend/out` (for static export) or `frontend/.next` (for SSR)
-5. Add environment variables
+### Backend
 
-### Database Setup
+Create a Python virtual environment and install dependencies:
 
-1. Create a Neon PostgreSQL database at [neon.tech](https://neon.tech)
-2. Run the database migrations: `python create_tables.py`
-3. Seed initial data: `python seed_db.py`
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-### Environment Variables
+Initialise the database:
+
+```bash
+python create_tables.py
+python seed_db.py
+```
+
+The FastAPI backend runs internally on:
+
+```text
+127.0.0.1:8000
+```
+
+### Frontend
+
+Navigate to the frontend directory:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+The production frontend runs on:
+
+```text
+127.0.0.1:3000
+```
+
+### Nginx
+
+Nginx provides the public HTTP entry point and routes requests internally:
+
+```text
+/api/*  →  FastAPI :8000
+/*      →  Next.js :3000
+```
+
+### PM2
+
+PM2 is used to keep the application services running and to restore the saved process list after an EC2 reboot.
+
+Check the processes with:
+
+```bash
+pm2 status
+```
+
+Save the process list with:
+
+```bash
+pm2 save
+```
+
+## Environment Variables
 
 Create a `.env` file in the root directory:
 
-```
+```env
 DATABASE_URL=postgresql://user:password@host:port/database
-OPENAI_API_KEY=your_openai_key
-GEMINI_API_KEY=your_gemini_key
+
+OPENAI_API_KEY=your_openai_api_key
+
+GEMINI_API_KEY=your_gemini_api_key
+
 SECRET_KEY=your_secret_key
+
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000  # local development
-
-# In Vercel set Environment Variable (Production):
-# NEXT_PUBLIC_API_BASE_URL=https://web-production-30b6.up.railway.app
 ```
+
+For the frontend, configure:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=/api
+```
+
+> Never commit real passwords, API keys, database credentials, SMTP credentials, or other secrets to the repository.
 
 ## Local Development
 
 ### Backend
 
-1. Create virtual environment: `python -m venv .venv`
-2. Activate: `source .venv/bin/activate`
-3. Install dependencies: `pip install -r requirements.txt`
-4. Run migrations: `python create_tables.py`
-5. Start server: `uvicorn main:app --reload`
+1. Create virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+2. Activate:
+
+```bash
+source .venv/bin/activate
+```
+
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Run database setup:
+
+```bash
+python create_tables.py
+```
+
+5. Start the server:
+
+```bash
+uvicorn main:app --reload
+```
+
+Local backend API:
+
+```text
+http://127.0.0.1:8000
+```
+
+Local Swagger:
+
+```text
+http://127.0.0.1:8000/docs
+```
 
 ### Frontend
 
-1. Navigate to frontend: `cd frontend`
-2. Install dependencies: `npm install`
-3. Start dev server: `npm run dev`
+1. Navigate to frontend:
+
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Start development server:
+
+```bash
+npm run dev
+```
+
+## Database Setup
+
+1. Create a PostgreSQL database.
+2. Configure the `DATABASE_URL` environment variable.
+3. Run:
+
+```bash
+python create_tables.py
+```
+
+4. Seed initial data if required:
+
+```bash
+python seed_db.py
+```
 
 ## How to Add New Features
 
 ### Backend (FastAPI)
 
-1. **Add Database Models**: 
-   - Edit `database.py` to add new SQLModel classes
-   - Run `python create_tables.py` to create tables
+1. **Add Database Models**
 
-2. **Create API Endpoints**:
-   - Add routes in `main.py` or create new modules
-   - Follow RESTful conventions
-   - Add proper authentication/authorization
+   * Edit `database.py` to add new SQLModel classes.
+   * Run `python create_tables.py` to create tables.
 
-3. **Add Business Logic**:
-   - Create functions in appropriate modules under `modules/`
-   - Use dependency injection for database sessions
+2. **Create API Endpoints**
 
-4. **Update Dependencies**:
-   - Add to `requirements.txt`
-   - Test with `pip install -r requirements.txt`
+   * Add routes in `main.py` or create new modules.
+   * Follow RESTful conventions.
+   * Add appropriate authentication and authorization.
+
+3. **Add Business Logic**
+
+   * Create functions in appropriate modules under `modules/`.
+   * Use dependency injection for database sessions.
+
+4. **Update Dependencies**
+
+   * Add dependencies to `requirements.txt`.
+   * Test with `pip install -r requirements.txt`.
 
 ### Frontend (Next.js)
 
-1. **Create New Pages**:
-   - Add to `frontend/src/app/` following the routing structure
-   - Use TypeScript for type safety
+1. **Create New Pages**
 
-2. **Add Components**:
-   - Create reusable components in `frontend/src/components/`
-   - Follow existing patterns for consistency
+   * Add pages under `frontend/src/app/`.
+   * Use TypeScript for type safety.
 
-3. **API Integration**:
-   - Use the existing API utilities in `frontend/src/lib/`
-   - Add new API calls as needed
+2. **Add Components**
 
-4. **Styling**:
-   - Use Tailwind CSS classes
-   - Follow the design system
+   * Create reusable components under `frontend/src/components/`.
+   * Follow existing project patterns.
+
+3. **API Integration**
+
+   * Use the existing API utilities under `frontend/src/lib/`.
+   * Add new API calls as required.
+
+4. **Styling**
+
+   * Use Tailwind CSS classes.
+   * Follow the existing design system.
 
 ### General Steps
 
-1. Plan the feature and database changes
-2. Implement backend API endpoints
-3. Update frontend to consume the new APIs
-4. Add proper error handling and validation
-5. Test thoroughly
-6. Update documentation
+1. Plan the feature and database changes.
+2. Implement backend API endpoints.
+3. Update frontend to consume the new APIs.
+4. Add proper error handling and validation.
+5. Test thoroughly.
+6. Update documentation.
 
 ### Example: Adding a New Entity
 
-1. Define the model in `database.py`
-2. Create CRUD endpoints in `main.py`
-3. Create frontend pages for list/view/edit
-4. Add navigation links
-5. Test the full flow
+1. Define the model in `database.py`.
+2. Create CRUD endpoints in `main.py`.
+3. Create frontend pages for list/view/edit.
+4. Add navigation links.
+5. Test the full flow.
 
 ## API Documentation
 
-The API documentation is available at `/docs` when the backend is running (Swagger UI) and `/redoc` for ReDoc.
+### Production
+
+Swagger UI:
+
+```text
+http://13.51.165.2/api/docs
+```
+
+### Local Development
+
+Swagger UI:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+ReDoc:
+
+```text
+http://127.0.0.1:8000/redoc
+```
+
+## Production Verification
+
+The AWS deployment was verified for:
+
+* Frontend availability
+* User authentication/login
+* Backend API availability
+* PostgreSQL connectivity
+* Swagger API documentation
+* Nginx reverse proxy routing
+* PM2 process management
+* PM2 startup persistence after EC2 reboot
+* Same-origin API routing through `/api`
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+1. Fork the repository.
+2. Create a feature branch.
+3. Make your changes.
+4. Test thoroughly.
+5. Submit a pull request.
 
 ## License
 
