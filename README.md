@@ -42,7 +42,7 @@ The application is deployed on an AWS EC2 Ubuntu server.
 * **API Documentation**: http://13.51.165.2/api/docs
 
 ### Production Architecture
-
+![AWS Deployment Architecture](docs/aws-architecture.png)
 ```text
                          Internet
                             |
